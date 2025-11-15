@@ -15,7 +15,6 @@ namespace Sieve
             CreateRibbon();
 
             Application.ControlledApplication.ApplicationInitialized += ControlledApplicationOnApplicationInitialized;
-           
         }
 
         private void ControlledApplicationOnApplicationInitialized(object? sender, ApplicationInitializedEventArgs e)
