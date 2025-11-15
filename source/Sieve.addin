@@ -1,0 +1,15 @@
+﻿<RevitAddIns>
+    <AddIn Type="Application">
+        <Name>Sieve</Name>
+        <Assembly>Sieve\Sieve.dll</Assembly>
+        <AddInId>0C01ECE0-C56F-459F-9E3B-720F23E27D59</AddInId>
+        <FullClassName>Sieve.Application</FullClassName>
+        <VendorId>Development</VendorId>
+        <VendorDescription></VendorDescription>
+        <VendorEmail></VendorEmail>
+    </AddIn>
+    <ManifestSettings>
+        <UseRevitContext>False</UseRevitContext>
+        <ContextName>Sieve</ContextName>
+    </ManifestSettings>
+</RevitAddIns>
