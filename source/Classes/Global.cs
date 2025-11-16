@@ -8,11 +8,11 @@ namespace Sieve.Classes
 {
     internal class Global
     {
-        internal static Dictionary<string, ViewSheet>
-            CurrentSessionModifiedSheets = new Dictionary<string, ViewSheet>();
+        internal static Dictionary<string, View>
+            CurrentSessionModifiedViews = new Dictionary<string, View>();
 
 
-        internal static List<ViewSheet> FlaggedSheets = new List<ViewSheet>();
+        internal static List<View> FlaggedViews = new List<View>();
 
     }
 }

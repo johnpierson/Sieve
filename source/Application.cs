@@ -32,34 +32,49 @@ namespace Sieve
         {
             var currentDoc = e.GetDocument();
             var docId = currentDoc.CreationGUID;
-            var sheetFilter = new ElementClassFilter(typeof(ViewSheet));
+            var viewFilter = new ElementClassFilter(typeof(View));
 
-            //first add modified sheets to dictionary
-            var modifiedSheets = e.GetModifiedElementIds(sheetFilter);
+            //first add new views to dictionary 
+            var newViews = e.GetAddedElementIds(viewFilter);
 
-            foreach (var id in modifiedSheets)
+            foreach (var id in newViews)
             {
-                var sheet = currentDoc.GetElement(id) as ViewSheet;
-                if (sheet != null)
+                if (currentDoc.GetElement(id) is View view)
                 {
-                    var sheetId = sheet.Id.Value;
+                    var sheetId = view.Id.Value;
 
-                    string sheetLookup = $"{docId}_{sheetId}";
+                    string viewLookup = $"{docId}_{sheetId}";
 
-                    Global.CurrentSessionModifiedSheets.TryAdd(sheetLookup, sheet);
+                    Global.CurrentSessionModifiedViews.TryAdd(viewLookup, view);
+                }
+            }
+
+
+            //now add modified views to dictionary
+            var modifiedViews = e.GetModifiedElementIds(viewFilter);
+
+            foreach (var id in modifiedViews)
+            {
+                if (currentDoc.GetElement(id) is View view)
+                {
+                    var sheetId = view.Id.Value;
+
+                    string viewLookup = $"{docId}_{sheetId}";
+
+                    Global.CurrentSessionModifiedViews.TryAdd(viewLookup, view);
                 }
             }
 
             //if any deleted elements are sheets, remove from dictionary
-            var deletedSheets = e.GetDeletedElementIds().Select(s => s.Value).ToList();
+            var deletedViews = e.GetDeletedElementIds().Select(s => s.Value).ToList();
 
-            if (!deletedSheets.Any()) return;
-            foreach (var id in deletedSheets)
+            if (!deletedViews.Any()) return;
+            foreach (var id in deletedViews)
             {
-                string sheetLookup = $"{docId}_{id}";
-                if (Global.CurrentSessionModifiedSheets.ContainsKey(sheetLookup))
+                string viewLookup = $"{docId}_{id}";
+                if (Global.CurrentSessionModifiedViews.ContainsKey(viewLookup))
                 {
-                    Global.CurrentSessionModifiedSheets.Remove(sheetLookup);
+                    Global.CurrentSessionModifiedViews.Remove(viewLookup);
                 }
             }
 
@@ -69,7 +84,7 @@ namespace Sieve
         {
             var currentDocument = e.Document;
 
-            var blockSave = CheckSheetsEdited(currentDocument);
+            var blockSave = CheckViewsEdited(currentDocument);
 
             if (blockSave)
             {
@@ -80,8 +95,8 @@ namespace Sieve
             }
 
             //clear all the current edits
-            Global.CurrentSessionModifiedSheets = new Dictionary<string, ViewSheet>();
-            Global.FlaggedSheets.Clear();
+            Global.CurrentSessionModifiedViews = new Dictionary<string, View>();
+            Global.FlaggedViews.Clear();
         }
 
 
@@ -100,16 +115,16 @@ namespace Sieve
         }
 
 
-        private bool CheckSheetsEdited(Document doc)
+        private bool CheckViewsEdited(Document doc)
         {
             var docId = doc.CreationGUID.ToString();
             //block save
-            if (!Global.CurrentSessionModifiedSheets.Any()) return false;
+            if (!Global.CurrentSessionModifiedViews.Any()) return false;
 
 
             List<string> keysToCheck = new List<string>();
 
-            foreach (var key in Global.CurrentSessionModifiedSheets.Keys)
+            foreach (var key in Global.CurrentSessionModifiedViews.Keys)
             {
                 if (key.StartsWith(docId))
                 {
@@ -119,15 +134,19 @@ namespace Sieve
 
             foreach (var key in keysToCheck)
             {
-                Global.CurrentSessionModifiedSheets.TryGetValue(key, out var value);
+                Global.CurrentSessionModifiedViews.TryGetValue(key, out var value);
 
-                if (value.get_Parameter(BuiltInParameter.SHEET_NAME).AsString().Contains(" Copy"))
+                var regex = new System.Text.RegularExpressions.Regex(@"Copy \d+$");
+
+                var viewName = value.get_Parameter(BuiltInParameter.VIEW_NAME).AsString();
+
+                if (regex.IsMatch(viewName))
                 {
-                    Global.FlaggedSheets.Add(value);
+                    Global.FlaggedViews.Add(value);
                 }
             }
 
-            return Global.FlaggedSheets.Any();
+            return Global.FlaggedViews.Any();
         }
     }
 }
