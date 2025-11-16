@@ -1,0 +1,28 @@
+# Output directory with generated analysis results
+output/
+
+# Binary files
+*.bin
+*.glb
+*.zip
+*.mp4
+*.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+

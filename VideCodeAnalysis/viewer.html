@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLTF Analysis Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 320px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        #info-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #info-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        #info-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        #info-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        #info-panel h2 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+            font-size: 18px;
+        }
+        
+        #info-panel p {
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        #status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status-loading {
+            background: rgba(255, 193, 7, 0.2);
+            color: #FFC107;
+        }
+        
+        .status-ready {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+        
+        .status-error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+        
+        #legend {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #controls button {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        #controls button:hover {
+            background: #45a049;
+        }
+        
+        #controls button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        #last-update {
+            font-size: 11px;
+            color: #aaa;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container"></div>
+        
+        <div id="info-panel">
+            <h2>GLTF Analysis Viewer</h2>
+            <p style="font-size: 12px; line-height: 1.4;">This viewer automatically loads the latest analyzed GLTF file and displays color-coded architectural issues. The analysis includes clash detection, spacing checks, clearances, accessibility, structural, egress, and more.</p>
+            
+            <div id="legend">
+                <div style="font-size: 11px; color: #888; margin-bottom: 8px; font-weight: bold;">Issue Types (Priority Order):</div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(255, 0, 0);"></div>
+                    <span>1. Clash Detection (Red)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(128, 0, 128);"></div>
+                    <span>2. Structural Issues (Purple)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(255, 192, 203);"></div>
+                    <span>3. Egress Issues (Pink)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(255, 0, 255);"></div>
+                    <span>4. Accessibility Issues (Magenta)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(0, 255, 255);"></div>
+                    <span>5. Clearance Issues (Cyan)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(0, 255, 128);"></div>
+                    <span>6. Equipment Clearance (Green-Cyan)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(0, 128, 255);"></div>
+                    <span>7. Fixture Placement (Blue)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(255, 255, 0);"></div>
+                    <span>8. Door Distance (Yellow)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: rgb(255, 128, 0);"></div>
+                    <span>9. Wall Spacing (Orange)</span>
+                </div>
+            </div>
+            
+            <div id="status" class="status-loading">Loading...</div>
+            <div id="debug-info" style="margin-top: 10px; font-size: 10px; color: #888; display: none;">
+                <div id="debug-text"></div>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <button id="reload-btn">Reload Model</button>
+            <button id="reset-camera-btn">Reset Camera</button>
+            <span id="last-update"></span>
+        </div>
+    </div>
+
+    <!-- Three.js Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js GLTFLoader -->
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Three.js OrbitControls -->
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Verify scripts loaded and make them available
+        window.addEventListener('load', function() {
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js core library failed to load');
+                return;
+            }
+            
+            // Check if GLTFLoader is available
+            if (typeof GLTFLoader === 'undefined' && typeof THREE.GLTFLoader === 'undefined') {
+                console.error('GLTFLoader failed to load. Trying alternative CDN...');
+                // Fallback: try loading from jsdelivr
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+                script.onerror = function() {
+                    console.error('Failed to load GLTFLoader from all CDN sources');
+                };
+                document.head.appendChild(script);
+            } else {
+                // Make sure it's available globally
+                if (typeof GLTFLoader === 'undefined' && typeof THREE.GLTFLoader !== 'undefined') {
+                    window.GLTFLoader = THREE.GLTFLoader;
+                }
+            }
+            
+            // Check if OrbitControls is available
+            if (typeof OrbitControls === 'undefined' && typeof THREE.OrbitControls === 'undefined') {
+                console.error('OrbitControls failed to load. Trying alternative CDN...');
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
+                script.onerror = function() {
+                    console.error('Failed to load OrbitControls from all CDN sources');
+                };
+                document.head.appendChild(script);
+            } else {
+                if (typeof OrbitControls === 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+                    window.OrbitControls = THREE.OrbitControls;
+                }
+            }
+        });
+    </script>
+    
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+        let checkInterval = null;
+        let lastFileTime = 0;
+        let lastFileName = null;
+        
+        // Initialize Three.js scene
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x2a2a2a);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                75,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                10000
+            );
+            // Top-down view by default (camera above, looking down)
+            camera.position.set(0, 100, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+            
+            // Controls - use THREE.OrbitControls if available, otherwise global OrbitControls
+            let OrbitControlsClass;
+            if (typeof THREE !== 'undefined' && THREE.OrbitControls) {
+                OrbitControlsClass = THREE.OrbitControls;
+            } else if (typeof OrbitControls !== 'undefined') {
+                OrbitControlsClass = OrbitControls;
+            } else {
+                console.error('OrbitControls is not available. Please check the browser console for script loading errors.');
+                // Continue without controls - user can still view but can't interact
+                OrbitControlsClass = null;
+            }
+            if (OrbitControlsClass) {
+                controls = new OrbitControlsClass(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.minDistance = 10;
+                controls.maxDistance = 500;
+            }
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(50, 50, 50);
+            directionalLight1.castShadow = true;
+            scene.add(directionalLight1);
+            
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+            directionalLight2.position.set(-50, -50, -50);
+            scene.add(directionalLight2);
+            
+            // Grid helper - removed per user request
+            // const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
+            // scene.add(gridHelper);
+            
+            // Axes helper - optional, keeping for reference
+            // const axesHelper = new THREE.AxesHelper(20);
+            // scene.add(axesHelper);
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Button handlers
+            document.getElementById('reload-btn').addEventListener('click', loadLatestModel);
+            document.getElementById('reset-camera-btn').addEventListener('click', resetCamera);
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+        
+        function resetCamera() {
+            // Reset to top-down view
+            camera.position.set(0, 100, 0);
+            if (controls) {
+                controls.target.set(0, 0, 0);
+                controls.update();
+            }
+        }
+        
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status-${type}`;
+        }
+        
+        function updateDebugInfo(text) {
+            const debugEl = document.getElementById('debug-info');
+            const debugText = document.getElementById('debug-text');
+            if (debugEl && debugText) {
+                debugText.textContent = text;
+                debugEl.style.display = 'block';
+            }
+        }
+        
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            document.getElementById('last-update').textContent = `Last updated: ${timeStr}`;
+        }
+        
+        function getLatestModelFile(cacheBuster = '') {
+            return fetch('/api/latest-model' + cacheBuster)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API response:', data);
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    if (!data.filename) {
+                        throw new Error('No filename in API response');
+                    }
+                    return data.filename;
+                })
+                .catch(error => {
+                    console.error('Error fetching latest model:', error);
+                    throw error;
+                });
+        }
+        
+        function loadModel(filename) {
+            updateStatus('Loading model...', 'loading');
+            
+            // Remove and dispose previous model completely
+            if (currentModel) {
+                console.log('Removing previous model from scene...');
+                scene.remove(currentModel);
+                
+                // Dispose all geometries and materials
+                currentModel.traverse((child) => {
+                    if (child.geometry) {
+                        child.geometry.dispose();
+                        console.log('Disposed geometry:', child.name || 'unnamed');
+                    }
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(mat => {
+                                if (mat.map) mat.map.dispose();
+                                mat.dispose();
+                            });
+                        } else {
+                            if (child.material.map) child.material.map.dispose();
+                            child.material.dispose();
+                        }
+                    }
+                });
+                
+                // Clear the reference
+                currentModel = null;
+                
+                // Force garbage collection hint (browser may or may not honor this)
+                if (window.gc) {
+                    window.gc();
+                }
+                
+                console.log('Previous model cleaned up');
+            }
+            
+            // Use THREE.GLTFLoader if available, otherwise fall back to global GLTFLoader
+            let GLTFLoaderClass;
+            if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+                GLTFLoaderClass = THREE.GLTFLoader;
+            } else if (typeof GLTFLoader !== 'undefined') {
+                GLTFLoaderClass = GLTFLoader;
+            } else {
+                const errorMsg = 'GLTFLoader is not available. Please check the browser console for script loading errors.';
+                console.error(errorMsg);
+                updateStatus(errorMsg, 'error');
+                throw new Error(errorMsg);
+            }
+            const loader = new GLTFLoaderClass();
+            // Add cache-busting parameter to prevent browser from using cached GLB files
+            const cacheBuster = '?t=' + Date.now();
+            const modelPath = `/output/${filename}${cacheBuster}`;
+            
+            // GLB files embed all buffers, so no path setup needed
+            // For GLTF files, we'd need to set the path, but we're using GLB now
+            const isGlb = filename.toLowerCase().endsWith('.glb');
+            if (!isGlb) {
+                loader.setPath('/output/');
+            }
+            
+            console.log('Loading model:', filename, isGlb ? '(GLB - embedded buffers)' : '(GLTF - external buffers)');
+            console.log('Full path:', modelPath);
+            updateDebugInfo(`Loading ${isGlb ? 'GLB' : 'GLTF'}: ${filename}`);
+            
+            loader.load(
+                modelPath,  // Full path for GLB, or filename if GLTF
+                (gltf) => {
+                    console.log('Model loaded successfully:', gltf);
+                    
+                    // Make sure any previous model is completely removed
+                    if (currentModel) {
+                        if (scene.children.includes(currentModel)) {
+                            console.warn('Previous model still in scene, removing...');
+                            scene.remove(currentModel);
+                        }
+                        currentModel = null;
+                    }
+                    
+                    // Clean up any orphaned mesh objects in the scene (except lights and helpers)
+                    // Only check direct children of scene to avoid removing objects from the new model
+                    const objectsToRemove = [];
+                    scene.children.forEach((child) => {
+                        // Remove any Mesh or Group objects that aren't lights, cameras, or helpers
+                        if ((child.type === 'Mesh' || child.type === 'Group' || child.type === 'Object3D') &&
+                            child.type !== 'AmbientLight' && 
+                            child.type !== 'DirectionalLight' && 
+                            child.type !== 'PointLight' &&
+                            child.type !== 'SpotLight' &&
+                            child.type !== 'PerspectiveCamera' &&
+                            child.type !== 'OrthographicCamera' &&
+                            child.type !== 'GridHelper' &&
+                            child.type !== 'AxesHelper') {
+                            objectsToRemove.push(child);
+                        }
+                    });
+                    objectsToRemove.forEach(obj => {
+                        console.log('Removing orphaned object:', obj.type, obj.name || 'unnamed');
+                        scene.remove(obj);
+                    });
+                    
+                    // Set the new model
+                    currentModel = gltf.scene;
+                    
+                    // Calculate bounding box and center the model
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    // Center the model
+                    currentModel.position.sub(center);
+                    
+                    // Adjust camera for top-down view
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    // Position camera above the model for top-down view
+                    const cameraHeight = maxDim * 1.5; // Height above model
+                    camera.position.set(0, cameraHeight, 0);
+                    if (controls) {
+                        controls.target.set(0, 0, 0);
+                        controls.update();
+                    }
+                    
+                    scene.add(currentModel);
+                    console.log('New model added to scene. Scene children count:', scene.children.length);
+                    updateStatus('Model loaded successfully', 'ready');
+                    updateLastUpdateTime();
+                },
+                (progress) => {
+                    if (progress.lengthComputable) {
+                        const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                        updateStatus(`Loading... ${percent}%`, 'loading');
+                    } else {
+                        updateStatus('Loading...', 'loading');
+                    }
+                },
+                (error) => {
+                    console.error('Error loading model:', error);
+                    console.error('Error details:', {
+                        message: error.message,
+                        path: modelPath,
+                        filename: filename,
+                        error: error
+                    });
+                    
+                    let errorMsg = 'Unknown error';
+                    if (error && error.message) {
+                        errorMsg = error.message;
+                    } else if (typeof error === 'string') {
+                        errorMsg = error;
+                    } else if (error && error.toString) {
+                        errorMsg = error.toString();
+                    }
+                    
+                    // Check if it's an old GLTF file with .bin issues
+                    if (filename.toLowerCase().endsWith('.gltf') && errorMsg.includes('buffer') || errorMsg.includes('.bin')) {
+                        errorMsg += ' (This appears to be an old GLTF file. New analyses are saved as GLB files which embed all data.)';
+                    }
+                    
+                    updateStatus('Error loading model: ' + errorMsg, 'error');
+                    updateDebugInfo(`Error: ${errorMsg}\nPath: ${modelPath}\nFilename: ${filename}\n\nTry reloading to get the latest GLB file.`);
+                }
+            );
+        }
+        
+        async function loadLatestModel() {
+            try {
+                console.log('Fetching latest model...');
+                // Add cache-busting to ensure we get the latest file list
+                const cacheBuster = '?t=' + Date.now();
+                const filename = await getLatestModelFile(cacheBuster);
+                console.log('Latest model filename:', filename);
+                if (filename) {
+                    await loadModel(filename);
+                } else {
+                    updateStatus('No model file found', 'error');
+                }
+            } catch (error) {
+                console.error('Error getting latest model:', error);
+                updateStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function checkForNewFile() {
+            // Add cache-busting parameter to prevent browser caching
+            const cacheBuster = '?t=' + Date.now();
+            fetch('/api/latest-model' + cacheBuster)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        console.warn('API error:', data.error);
+                        return;
+                    }
+                    
+                    // Check if filename or file time has changed
+                    const filenameChanged = data.filename && data.filename !== lastFileName;
+                    const filetimeChanged = data.filetime && data.filetime !== lastFileTime;
+                    
+                    if (filenameChanged || filetimeChanged) {
+                        console.log('New file detected:', {
+                            filename: data.filename,
+                            previous: lastFileName,
+                            filetime: data.filetime,
+                            previousTime: lastFileTime
+                        });
+                        
+                        lastFileTime = data.filetime;
+                        lastFileName = data.filename;
+                        
+                        // Reload the model
+                        loadLatestModel();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking for new file:', error);
+                });
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) {
+                controls.update();
+            }
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize and start
+        initScene();
+        animate();
+        
+        // Wait a moment for scripts to load, then load initial model
+        window.addEventListener('load', function() {
+            // Small delay to ensure all scripts are loaded
+            setTimeout(function() {
+                loadLatestModel();
+                // Check for new files every 2 seconds
+                checkInterval = setInterval(checkForNewFile, 2000);
+            }, 100);
+        });
+    </script>
+</body>
+</html>
+
