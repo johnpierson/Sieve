@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Shapes;
@@ -28,18 +29,29 @@ namespace c4r.UI
 
         public ClippyWindow()
         {
-            InitializeComponent();
-            //HideBubble();
-            
-            //event handlers for drag window and close window
-            this.MouseLeftButtonDown += OnOnMouseLeftButtonDown;
-            this.MouseRightButtonDown += OnOnMouseRightButtonDown;
+            try
+            {
+                InitializeComponent();
+                //HideBubble();
+                
+                //event handlers for drag window and close window
+                this.MouseLeftButtonDown += OnOnMouseLeftButtonDown;
+                this.MouseRightButtonDown += OnOnMouseRightButtonDown;
 
-            //generate a new clippy element
-            clippyItem = new Clippy(this.ClippyCanvas);
-            clippyItem.StartAnimation(ClippyAnimations.Greeting);
+                //generate a new clippy element
+                clippyItem = new Clippy(this.ClippyCanvas);
+                if (clippyItem != null)
+                {
+                    clippyItem.StartAnimation(ClippyAnimations.Greeting);
+                }
 
-            GetAnimations();
+                GetAnimations();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error initializing ClippyWindow: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
         }
 
 
@@ -48,7 +60,10 @@ namespace c4r.UI
 
         private void OnOnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
-            clippyItem.StartAnimation(ClippyAnimations.GoodBye);
+            if (clippyItem != null)
+            {
+                clippyItem.StartAnimation(ClippyAnimations.GoodBye);
+            }
             //start a timer to delay the closing.
             aTimer.Interval = 4000;
             aTimer.Tick += OnTimerOnElapsed;
@@ -70,11 +85,21 @@ namespace c4r.UI
         }
         private void ClippyCanvas_OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            Random rnd = new Random();
-            int animationInt = rnd.Next(0, 38);
+            if (clippyItem == null || _clippyAnimations.Count == 0)
+                return;
 
-            ClippyAnimations animation = _clippyAnimations[animationInt];
-            clippyItem.StartAnimation(animation);
+            try
+            {
+                Random rnd = new Random();
+                int animationInt = rnd.Next(0, _clippyAnimations.Count);
+
+                ClippyAnimations animation = _clippyAnimations[animationInt];
+                clippyItem.StartAnimation(animation);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ClippyCanvas_OnMouseDown: {ex.Message}");
+            }
         }
 
         private void GetAnimations()

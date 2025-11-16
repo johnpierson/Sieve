@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -21,12 +22,12 @@ namespace c4r
         /// <summary>
         /// The URI for the sprite with all the animation stages for Clippy
         /// </summary>
-        private static string spriteResourceUri = "pack://application:,,,/ClippyForRevit;component/Resources/clippy.png";
+        private static string spriteResourceUri = "pack://application:,,,/Sieve;component/Resources/clippy.png";
 
         /// <summary>
         /// The URI for the animations json definition
         /// </summary>
-        private static string animationsResourceUri = "pack://application:,,,/ClippyForRevit;component/Resources/animations2.json";
+        private static string animationsResourceUri = "pack://application:,,,/Sieve;component/Resources/animations2.json";
 
         /// <summary>
         /// The sprite with all the animation stages for Clippy
@@ -46,12 +47,12 @@ namespace c4r
         /// <summary>
         /// The with of the frame
         /// </summary>
-        public static int ClipWidth = 124;
+        public static int ClipWidth = 248;
 
         /// <summary>
         /// The height of the frame
         /// </summary>
-        public static int ClipHeight = 93;
+        public static int ClipHeight = 186;
 
         /// <summary>
         /// Seconds between a random idle animation and another
@@ -96,28 +97,42 @@ namespace c4r
         /// </summary>
         public Clippy(Canvas canvas)
         {
-            this.Sprite = new BitmapImage(new Uri(spriteResourceUri));
-
-            clippedImage = new System.Windows.Controls.Image();
-            clippedImage.Source = Sprite;
-            clippedImage.Stretch = Stretch.None;
-
-            canvas.Children.Clear();
-            canvas.Children.Add(clippedImage);
-
-            if (Animations == null)
-                RegisterAnimations();
-
-            this.AllAnimations = new List<ClippyAnimations>();
-
-            var values = Enum.GetValues(typeof(ClippyAnimations));
-
-            foreach (ClippyAnimations val in values)
+            try
             {
-                this.AllAnimations.Add(val);
-            }
+                this.Sprite = new BitmapImage(new Uri(spriteResourceUri));
 
-            RegisterIdleRandomAnimations();
+                clippedImage = new System.Windows.Controls.Image();
+                clippedImage.Source = Sprite;
+                clippedImage.Stretch = Stretch.None;
+
+                // Apply 2x scale transform to double the image size
+                var scaleTransform = new ScaleTransform(2.0, 2.0);
+                clippedImage.RenderTransform = scaleTransform;
+                clippedImage.RenderTransformOrigin = new System.Windows.Point(0, 0);
+
+                canvas.Children.Clear();
+                canvas.Children.Add(clippedImage);
+
+                if (Animations == null)
+                    RegisterAnimations();
+
+                this.AllAnimations = new List<ClippyAnimations>();
+
+                var values = Enum.GetValues(typeof(ClippyAnimations));
+
+                foreach (ClippyAnimations val in values)
+                {
+                    this.AllAnimations.Add(val);
+                }
+
+                RegisterIdleRandomAnimations();
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't crash - window can still show without animation
+                System.Diagnostics.Debug.WriteLine($"Error initializing Clippy: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Resource URI: {spriteResourceUri}");
+            }
         }
 
         /// <summary>
@@ -125,10 +140,19 @@ namespace c4r
         /// </summary>
         private void RegisterAnimations()
         {
-            Uri uri = new Uri(animationsResourceUri);
-            StreamResourceInfo info = Application.GetResourceStream(uri);
+            try
+            {
+                Uri uri = new Uri(animationsResourceUri);
+                StreamResourceInfo info = Application.GetResourceStream(uri);
 
-            List<Animation> storedAnimations = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Animation>>(StreamToString(info.Stream));
+                if (info == null || info.Stream == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to load animations resource: {animationsResourceUri}");
+                    Animations = new Dictionary<string, Tuple<DoubleAnimationUsingKeyFrames, DoubleAnimationUsingKeyFrames>>();
+                    return;
+                }
+
+                List<Animation> storedAnimations = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Animation>>(StreamToString(info.Stream));
 
             Animations = new Dictionary<string, Tuple<DoubleAnimationUsingKeyFrames, DoubleAnimationUsingKeyFrames>>();
 
@@ -167,6 +191,16 @@ namespace c4r
                 Animations.Add(animation.Name, new Tuple<DoubleAnimationUsingKeyFrames, DoubleAnimationUsingKeyFrames>(xDoubleAnimation, yDoubleAnimation));
 
                 xDoubleAnimation.Completed += xDoubleAnimation_Completed;
+            }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error registering animations: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Resource URI: {animationsResourceUri}");
+                if (Animations == null)
+                {
+                    Animations = new Dictionary<string, Tuple<DoubleAnimationUsingKeyFrames, DoubleAnimationUsingKeyFrames>>();
+                }
             }
         }
 
@@ -207,9 +241,25 @@ namespace c4r
         /// <param name="animationType"></param>
         public void StartAnimation(ClippyAnimations animationType, bool byPassCurrentAnimation = false)
         {
-            clippedImage.BeginAnimation(Canvas.LeftProperty, Animations[animationType.ToString()].Item1);
-            clippedImage.BeginAnimation(Canvas.TopProperty, Animations[animationType.ToString()].Item2);
-            
+            try
+            {
+                if (Animations == null || clippedImage == null)
+                    return;
+
+                string animationKey = animationType.ToString();
+                if (!Animations.ContainsKey(animationKey))
+                {
+                    System.Diagnostics.Debug.WriteLine($"Animation not found: {animationKey}");
+                    return;
+                }
+
+                clippedImage.BeginAnimation(Canvas.LeftProperty, Animations[animationKey].Item1);
+                clippedImage.BeginAnimation(Canvas.TopProperty, Animations[animationKey].Item2);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error starting animation {animationType}: {ex.Message}");
+            }
         }
 
         

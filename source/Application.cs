@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.SymbolStore;
 using Autodesk.Revit.DB.Events;
 using c4r.UI;
+using Clippy.Configurations;
 using Nice3point.Revit.Toolkit.External;
 using Sieve.Classes;
 using Sieve.Commands;
@@ -29,7 +30,7 @@ namespace Sieve
 
             Application.ControlledApplication.DocumentChanged += ControlledApplicationOnDocumentChanged;
 
-
+            RegisterClippyWindow();
         }
 
         private void ControlledApplicationOnDocumentChanged(object? sender, DocumentChangedEventArgs e)
@@ -94,24 +95,24 @@ namespace Sieve
             {
                 //cancel the save for now
                 //e.Cancel();
-                if (Global.clippyWindow is null)
+
+                Global.clippyWindow.BubbleText.Text = $"Hi there, during your last session, you created sheets with terrible names. Please fix the following views, {string.Join("\n", Global.FlaggedViews.Select(v => v.get_Parameter(BuiltInParameter.VIEW_NAME).AsString()))}";
+                
+                // Play attention-getting animation
+                if (ClippyWindow.clippyItem != null)
                 {
-                    Global.clippyWindow = new ClippyWindow();
-
-                    //parent the clippy window so it will just run.
-                    new System.Windows.Interop.WindowInteropHelper(Global.clippyWindow).Owner = UiApplication.MainWindowHandle;
-
-                    Global.clippyWindow.Top = UiApplication.MainWindowExtents.Top;
-                    Global.clippyWindow.Left = UiApplication.MainWindowExtents.Left;
+                    ClippyWindow.clippyItem.StartAnimation(ClippyAnimations.GetAttention);
                 }
-
-                Global.clippyWindow.BubbleText.Text = "test";
-                Global.clippyWindow.Show();
+                
+                Global.clippyWindow.ShowDialog();
+            }
+            else
+            {
+                //clear all the current edits
+                Global.CurrentSessionModifiedViews = new Dictionary<string, View>();
+                Global.FlaggedViews.Clear();
             }
 
-            //clear all the current edits
-            Global.CurrentSessionModifiedViews = new Dictionary<string, View>();
-            Global.FlaggedViews.Clear();
         }
 
 
