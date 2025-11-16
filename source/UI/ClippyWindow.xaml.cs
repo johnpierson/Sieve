@@ -123,7 +123,6 @@ namespace c4r.UI
         }
         internal void HideBubble()
         {
-            BubbleCorner.Visibility = Visibility.Hidden;
             BubbleBody.Visibility = Visibility.Hidden;
             BubbleText.Visibility = Visibility.Hidden;
             BubbleButton.Visibility = Visibility.Hidden;
