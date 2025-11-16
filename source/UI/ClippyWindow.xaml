@@ -1,0 +1,31 @@
+﻿<Window x:Class="c4r.UI.ClippyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:local="clr-namespace:c4r.UI"
+        mc:Ignorable="d" SizeToContent="WidthAndHeight" Background="Transparent" WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize" ShowInTaskbar="False" ToolTip="Click to cycle animation, right click to close."
+        WindowStartupLocation="CenterOwner" MinWidth="565.332" MinHeight="258">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <Canvas x:Name="ClippyCanvas" Grid.Column="0" Height="180" Width="236" Margin="20,20,0,20" MouseDown="ClippyCanvas_OnMouseDown" ClipToBounds="True"/>
+        
+        <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0,20,20,20" VerticalAlignment="Top">
+
+            <Border Name="BubbleBody" Background="LightGoldenrodYellow" BorderBrush="Black" BorderThickness="1" CornerRadius="6" Padding="12" Width="262" HorizontalAlignment="Left">
+                <TextBlock Name="BubbleText" Text="Text" TextWrapping="Wrap" FontSize="20" FontFamily="Comic Sans MS" />
+            </Border>
+            
+            <Button Name="BubbleButton" Content="ok" HorizontalAlignment="Right" Height="26" Width="64" FontSize="16" Margin="0,8,0,0" Click="BubbleButton_Click"/>
+        </StackPanel>
+
+    </Grid>
+
+</Window>
