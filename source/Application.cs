@@ -50,7 +50,11 @@ namespace Sieve
 
                     string viewLookup = $"{docId}_{sheetId}";
 
-                    Global.CurrentSessionModifiedViews.TryAdd(viewLookup, view);
+
+                    if (!Global.CurrentSessionModifiedViews.ContainsKey(viewLookup))
+                    {
+                        Global.CurrentSessionModifiedViews.Add(viewLookup, view);
+                    }
                 }
             }
 
@@ -65,8 +69,10 @@ namespace Sieve
                     var sheetId = view.Id.Value;
 
                     string viewLookup = $"{docId}_{sheetId}";
-
-                    Global.CurrentSessionModifiedViews.TryAdd(viewLookup, view);
+                    if (!Global.CurrentSessionModifiedViews.ContainsKey(viewLookup))
+                    {
+                        Global.CurrentSessionModifiedViews.Add(viewLookup, view);
+                    }
                 }
             }
 
