@@ -37,6 +37,7 @@ namespace c4r.UI
                 //event handlers for drag window and close window
                 this.MouseLeftButtonDown += OnOnMouseLeftButtonDown;
                 this.MouseRightButtonDown += OnOnMouseRightButtonDown;
+                this.Closed += OnWindowClosed;
 
                 //generate a new clippy element
                 clippyItem = new Clippy(this.ClippyCanvas);
@@ -52,6 +53,12 @@ namespace c4r.UI
                 System.Diagnostics.Debug.WriteLine($"Error initializing ClippyWindow: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
+        }
+
+        private void OnWindowClosed(object? sender, EventArgs e)
+        {
+            // Clear the global reference so window can be recreated next time
+            Sieve.Classes.Global.clippyWindow = null;
         }
 
 

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.SymbolStore;
+﻿using System;
+using System.Diagnostics.SymbolStore;
 using Autodesk.Revit.DB.Events;
 using c4r.UI;
 using Clippy.Configurations;
@@ -17,7 +18,6 @@ namespace Sieve
     {
         public override void OnStartup()
         {
-            CreateRibbon();
 
             Application.ControlledApplication.ApplicationInitialized += ControlledApplicationOnApplicationInitialized;
         }
@@ -95,8 +95,13 @@ namespace Sieve
             {
                 //cancel the save for now
                
+                // Recreate window if it's null (window sets itself to null when closed)
+                if (Global.clippyWindow == null)
+                {
+                    RegisterClippyWindow();
+                }
 
-                Global.clippyWindow.BubbleText.Text = $"Hi there, during your last session, you created sheets with terrible names. Please fix the following views, {string.Join("\n", Global.FlaggedViews.Select(v => v.get_Parameter(BuiltInParameter.VIEW_NAME).AsString()))}";
+                Global.clippyWindow.BubbleText.Text = $"Hi there, during your last session, you created sheets with terrible names. Please fix the following views, {string.Join("\n", Global.FlaggedViews.Distinct().Select(v => v.get_Parameter(BuiltInParameter.VIEW_NAME).AsString()))}";
                 
                 // Play attention-getting animation
                 if (ClippyWindow.clippyItem != null)
