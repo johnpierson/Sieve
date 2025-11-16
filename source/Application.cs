@@ -67,13 +67,21 @@ namespace Sieve
 
         private void OnDocSaving(object? sender, DocumentSavingEventArgs e)
         {
-            var version = Document.GetDocumentVersion(e.Document);
+            var currentDocument = e.Document;
 
-            var versionGuid = version.VersionGUID;
+            var blockSave = CheckSheetsEdited(currentDocument);
 
-            var allChanges = e.Document.GetChangedElements(versionGuid);
+            if (blockSave)
+            {
+                //cancel the save for now
+                e.Cancel();
 
-            var ids = allChanges.GetCreatedElementIds();
+
+            }
+
+            //clear all the current edits
+            Global.CurrentSessionModifiedSheets = new Dictionary<string, ViewSheet>();
+            Global.FlaggedSheets.Clear();
         }
 
 
@@ -115,10 +123,11 @@ namespace Sieve
 
                 if (value.get_Parameter(BuiltInParameter.SHEET_NAME).AsString().Contains(" Copy"))
                 {
-                    
+                    Global.FlaggedSheets.Add(value);
                 }
             }
 
+            return Global.FlaggedSheets.Any();
         }
     }
 }
