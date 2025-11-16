@@ -1,13 +1,15 @@
 ﻿using System.Diagnostics.SymbolStore;
 using Autodesk.Revit.DB.Events;
+using c4r.UI;
 using Nice3point.Revit.Toolkit.External;
 using Sieve.Classes;
 using Sieve.Commands;
+using View = Autodesk.Revit.DB.View;
 
 namespace Sieve
 {
     /// <summary>
-    ///     Application entry point
+    /// Application entry point
     /// </summary>
     [UsedImplicitly]
     public class Application : ExternalApplication
@@ -26,6 +28,8 @@ namespace Sieve
             Application.ControlledApplication.DocumentSaving += OnDocSaving;
 
             Application.ControlledApplication.DocumentChanged += ControlledApplicationOnDocumentChanged;
+
+
         }
 
         private void ControlledApplicationOnDocumentChanged(object? sender, DocumentChangedEventArgs e)
@@ -89,9 +93,20 @@ namespace Sieve
             if (blockSave)
             {
                 //cancel the save for now
-                e.Cancel();
+                //e.Cancel();
+                if (Global.clippyWindow is null)
+                {
+                    Global.clippyWindow = new ClippyWindow();
 
+                    //parent the clippy window so it will just run.
+                    new System.Windows.Interop.WindowInteropHelper(Global.clippyWindow).Owner = UiApplication.MainWindowHandle;
 
+                    Global.clippyWindow.Top = UiApplication.MainWindowExtents.Top;
+                    Global.clippyWindow.Left = UiApplication.MainWindowExtents.Left;
+                }
+
+                Global.clippyWindow.BubbleText.Text = "test";
+                Global.clippyWindow.Show();
             }
 
             //clear all the current edits
@@ -148,5 +163,17 @@ namespace Sieve
 
             return Global.FlaggedViews.Any();
         }
+
+        internal void RegisterClippyWindow()
+        {
+            Global.clippyWindow = new ClippyWindow();
+
+            //parent the clippy window so it will just run.
+            new System.Windows.Interop.WindowInteropHelper(Global.clippyWindow).Owner = UiApplication.MainWindowHandle;
+
+            Global.clippyWindow.Top = UiApplication.MainWindowExtents.Top;
+            Global.clippyWindow.Left = UiApplication.MainWindowExtents.Left;
+        }
+
     }
 }
