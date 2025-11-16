@@ -131,6 +131,7 @@ namespace c4r.UI
         private void BubbleButton_Click(object sender, RoutedEventArgs e)
         {
             HideBubble();
+            this.Close();
         }
     }
 

@@ -94,7 +94,7 @@ namespace Sieve
             if (blockSave)
             {
                 //cancel the save for now
-                //e.Cancel();
+               
 
                 Global.clippyWindow.BubbleText.Text = $"Hi there, during your last session, you created sheets with terrible names. Please fix the following views, {string.Join("\n", Global.FlaggedViews.Select(v => v.get_Parameter(BuiltInParameter.VIEW_NAME).AsString()))}";
                 
@@ -105,6 +105,8 @@ namespace Sieve
                 }
                 
                 Global.clippyWindow.ShowDialog();
+
+                e.Cancel();
             }
             else
             {
